@@ -1,17 +1,18 @@
 #!/bin/bash
 set -e
+#set -x
 
 # Load Options
 while getopts "a:b:c:d:e:f:" o; do
   case "${o}" in
   a)
-    export directory=${OPTARG}
+    export directory="${OPTARG}"
     ;;
   b)
-    export forceResolution=${OPTARG}
+    export forceResolution="${OPTARG}"
     ;;
   c)
-    export failWhenOutdated=${OPTARG}
+    export failWhenOutdated="${OPTARG}"
     ;;
   d)
     if [ ! -z "${OPTARG}" ]; then
@@ -19,10 +20,10 @@ while getopts "a:b:c:d:e:f:" o; do
     fi
     ;;
   e)
-    export workspaceName=${OPTARG}
+    export workspaceName="${OPTARG}"
     ;;
   f)
-    export scheme=${OPTARG}
+    export scheme="${OPTARG}"
     ;;
   esac
 done
@@ -36,7 +37,8 @@ fi
 # Change Directory
 if [ "$directory" != "." ]; then
   echo "Changing directory to '$directory'."
-  cd $directory
+  cd "$directory"
+  ls -l
 fi
 
 # Identify `Package.resolved` location
@@ -52,13 +54,13 @@ echo "Checksum: $CHECKSUM."
 
 # Define Xcodebuild Inputs
 if [ ! -z "$workspaceName" ]; then
-  xcodebuildInputs="-workspace $workspaceName -scheme $scheme"
+  xcodebuildInputs=(-workspace "$workspaceName" -scheme "$scheme")
 else
-  xcodebuildInputs=""
+  xcodebuildInputs=()
 fi
 
 # Cleanup Caches
-DERIVED_DATA=$(xcodebuild ${xcodebuildInputs} -showBuildSettings -disableAutomaticPackageResolution -skipPackageUpdates | grep -m 1 BUILD_DIR | grep -oE "\/.*" | sed 's|/Build/Products||')
+DERIVED_DATA=$(xcodebuild "${xcodebuildInputs[@]}" -showBuildSettings -disableAutomaticPackageResolution -skipPackageUpdates | grep -m 1 BUILD_DIR | grep -oE "\/.*" | sed 's|/Build/Products||')
 rm -rf "$DERIVED_DATA"
 
 # If `forceResolution`, then delete the `Package.resolved`
@@ -69,11 +71,11 @@ fi
 
 # Should be mostly redundant as we use the disable cache flag.
 SPM_CACHE="~/Library/Caches/org.swift.swiftpm/"
-rm -rf "$CACHE_PATH"
+rm -rf "$SPM_CACHE"
 
 # Resolve Dependencies
 echo "::group::xcodebuild resolve dependencies"
-xcodebuild ${xcodebuildInputs} -resolvePackageDependencies -disablePackageRepositoryCache
+xcodebuild "${xcodebuildInputs[@]}" -resolvePackageDependencies -disablePackageRepositoryCache
 echo "::endgroup"
 
 # Determine Changes
